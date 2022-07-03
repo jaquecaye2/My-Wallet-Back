@@ -21,8 +21,6 @@ app.use(cors());
 app.use(express.json());
 
 app.post("/cadastrar", async (request, response) => {
-  // fazer validação para não cadastrar emails iguais
-
   const usuario = request.body;
 
   const usuarioSchema = joi.object({
@@ -35,6 +33,18 @@ app.post("/cadastrar", async (request, response) => {
 
   if (error) {
     return response.sendStatus(422);
+  }
+
+  const verificarUsuarioIgual = await db
+    .collection("usuarios")
+    .find({ email: usuario.email })
+    .toArray();
+
+  console.log(verificarUsuarioIgual);
+
+  if (verificarUsuarioIgual.length !== 0) {
+    response.status(422).send("Usuario já cadastrado");
+    return;
   }
 
   const senhaCriptografada = bcrypt.hashSync(usuario.senha, 10);
@@ -89,29 +99,48 @@ app.post("/login", async (request, response) => {
   }
 });
 
+app.delete("/sair", async (request, response) => {
+  const { authorization } = request.headers;
+  const token = authorization?.replace("Bearer ", "");
+
+  const usuario = await db.collection("sessoes").findOne({ token });
+
+  if (!usuario) {
+    response.status(422).send();
+    return;
+  }
+
+  try {
+    await db.collection("sessoes").deleteOne({token})
+    response.status(201).send();
+  } catch (error) {
+    response.status(500).send();
+  }
+})
+
 app.post("/registros", async (request, response) => {
   const dados = request.body;
-  const {authorization} = request.headers;
-  const token = authorization?.replace('Bearer ', '');
+  const { authorization } = request.headers;
+  const token = authorization?.replace("Bearer ", "");
 
   const registroSchema = joi.object({
     valor: joi.number().required(),
     descricao: joi.string().required(),
-    tipo: joi.string().valid("entrada", "saida")
+    tipo: joi.string().valid("entrada", "saida"),
   });
 
-  const validou = registroSchema.validate(dados)
+  const validou = registroSchema.validate(dados);
 
-  if (validou.error){
-    response.status(422).send()
-    return
+  if (validou.error) {
+    response.status(422).send();
+    return;
   }
 
-  const usuario = await db.collection("sessoes").findOne({token})
+  const usuario = await db.collection("sessoes").findOne({ token });
 
   if (!usuario) {
-    response.status(422).send()
-    return
+    response.status(422).send();
+    return;
   }
 
   const novoRegistro = {
@@ -121,8 +150,8 @@ app.post("/registros", async (request, response) => {
     valor: dados.valor,
     descricao: dados.descricao,
     tipo: dados.tipo,
-    dia: `${dayjs().$D}/${dayjs().$M}`
-  }
+    dia: `${dayjs().$D}/${dayjs().$M}`,
+  };
 
   try {
     await db.collection("registros").insertOne(novoRegistro);
@@ -132,28 +161,27 @@ app.post("/registros", async (request, response) => {
   }
 });
 
-app.get("/registros", async(request, response) => {
-  const {authorization} = request.headers;
-  const token = authorization?.replace('Bearer ', '');
+app.get("/registros", async (request, response) => {
+  const { authorization } = request.headers;
+  const token = authorization?.replace("Bearer ", "");
 
-  const usuario = await db.collection("sessoes").findOne({token})
+  const usuario = await db.collection("sessoes").findOne({ token });
 
   if (!usuario) {
-    response.status(422).send()
-    return
+    response.status(422).send();
+    return;
   }
 
   try {
-    const registros = await db.collection("registros").find({userId: usuario.userId}).toArray();
+    const registros = await db
+      .collection("registros")
+      .find({ userId: usuario.userId })
+      .toArray();
     response.status(201).send(registros);
   } catch (error) {
     response.status(500).send();
   }
-})
-
-// fazer uma logica para remover usuarios inativos das sessões
-
-// fazer a logica de logout removendo o usuario da sessao
+});
 
 const PORT = process.env.PORT;
 app.listen(PORT);
