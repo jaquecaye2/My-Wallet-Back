@@ -5,6 +5,7 @@ import { MongoClient } from "mongodb";
 import joi from "joi";
 import bcrypt from "bcrypt";
 import { v4 as uuid } from "uuid";
+import dayjs from "dayjs";
 
 dotenv.config();
 
@@ -20,6 +21,8 @@ app.use(cors());
 app.use(express.json());
 
 app.post("/cadastrar", async (request, response) => {
+  // fazer validação para não cadastrar emails iguais
+
   const usuario = request.body;
 
   const usuarioSchema = joi.object({
@@ -85,6 +88,72 @@ app.post("/login", async (request, response) => {
     response.status(401).send("Senha ou email incorretos!");
   }
 });
+
+app.post("/registros", async (request, response) => {
+  const dados = request.body;
+  const {authorization} = request.headers;
+  const token = authorization?.replace('Bearer ', '');
+
+  const registroSchema = joi.object({
+    valor: joi.number().required(),
+    descricao: joi.string().required(),
+    tipo: joi.string().valid("entrada", "saida")
+  });
+
+  const validou = registroSchema.validate(dados)
+
+  if (validou.error){
+    response.status(422).send()
+    return
+  }
+
+  const usuario = await db.collection("sessoes").findOne({token})
+
+  if (!usuario) {
+    response.status(422).send()
+    return
+  }
+
+  const novoRegistro = {
+    userId: usuario.userId,
+    de: usuario.nome,
+    email: usuario.email,
+    valor: dados.valor,
+    descricao: dados.descricao,
+    tipo: dados.tipo,
+    dia: `${dayjs().$D}/${dayjs().$M}`
+  }
+
+  try {
+    await db.collection("registros").insertOne(novoRegistro);
+    response.status(201).send(novoRegistro);
+  } catch (error) {
+    response.status(500).send();
+  }
+});
+
+app.get("/registros", async(request, response) => {
+  const {authorization} = request.headers;
+  const token = authorization?.replace('Bearer ', '');
+
+  const usuario = await db.collection("sessoes").findOne({token})
+
+  if (!usuario) {
+    response.status(422).send()
+    return
+  }
+
+  try {
+    const registros = await db.collection("registros").find({userId: usuario.userId}).toArray();
+    response.status(201).send(registros);
+  } catch (error) {
+    response.status(500).send();
+  }
+})
+
+// fazer uma logica para remover usuarios inativos das sessões
+
+// fazer a logica de logout removendo o usuario da sessao
 
 const PORT = process.env.PORT;
 app.listen(PORT);
