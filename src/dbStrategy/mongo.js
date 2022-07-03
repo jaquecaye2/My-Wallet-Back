@@ -10,5 +10,7 @@ client.connect().then(() => {
   db = client.db(process.env.MONGO_DATABASE);
 });
 
+console.log(db)
+
 export {db}
 
