@@ -63,7 +63,7 @@ export async function renderizarRegistros(request, response) {
       .collection("registros")
       .find({ userId: usuario.userId })
       .toArray();
-    response.status(201).send(registros);
+    response.status(201).send(registros.reverse());
   } catch (error) {
     response.status(500).send();
   }
