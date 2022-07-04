@@ -20,6 +20,20 @@ export async function cadastrarRegistro(request, response) {
     return;
   }
 
+  let formatoData
+  let diaHoje = parseInt(dayjs().$D)
+  let mesHoje = parseInt(dayjs().$M)
+
+  if (diaHoje < 10 && mesHoje < 10){
+    formatoData = `0${dayjs().$D}/0${dayjs().$M}`
+  } else if (diaHoje < 10 && mesHoje > 10){
+    formatoData = `0${dayjs().$D}/${dayjs().$M}`
+  } else if (diaHoje > 10 && mesHoje < 10){
+    formatoData = `${dayjs().$D}/0${dayjs().$M}`
+  } else {
+    formatoData = `${dayjs().$D}/${dayjs().$M}`
+  }
+
   const novoRegistro = {
     userId: usuario.userId,
     de: usuario.nome,
@@ -27,7 +41,7 @@ export async function cadastrarRegistro(request, response) {
     valor: dados.valor,
     descricao: dados.descricao,
     tipo: dados.tipo,
-    dia: `${dayjs().$D}/${dayjs().$M}`
+    dia: formatoData
   };
 
   try {
