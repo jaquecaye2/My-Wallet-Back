@@ -27,8 +27,7 @@ export async function cadastrarRegistro(request, response) {
     valor: dados.valor,
     descricao: dados.descricao,
     tipo: dados.tipo,
-    dia: `${dayjs().$D}/${dayjs().$M}`,
-    mes: dayjs().$M
+    dia: `${dayjs().$D}/${dayjs().$M}`
   };
 
   try {
@@ -41,12 +40,14 @@ export async function cadastrarRegistro(request, response) {
 
 export async function renderizarRegistros(request, response) {
   
+  // fazer lógica para pegar somente os registros do mês corrente
+
   const usuario = response.locals.usuario;
 
   try {
     const registros = await db
       .collection("registros")
-      .find({$and: [{ userId: usuario.userId }, {mes: dayjs().$M}]})
+      .find({ userId: usuario.userId })
       .toArray();
     response.status(201).send(registros);
   } catch (error) {
